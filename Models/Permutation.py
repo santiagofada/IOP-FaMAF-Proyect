@@ -12,7 +12,10 @@ class PermutationModel:
         self.teams = range(self.nteams)
         self.rounds = range(self.nteams - 1)
         self.permutations = list(itertools.permutations(self.teams))
-
+        self.permutations = [p for p in itertools.permutations(self.teams) if
+                             all(p[r] != i for r, i in enumerate(self.teams))]
+        print("AAAAAAAAAAAAAAAAAAAa")
+        print(len(self.permutations))
         self._build(entera, **kwargs)
 
     def _build(self,entera=False, **kwargs):
