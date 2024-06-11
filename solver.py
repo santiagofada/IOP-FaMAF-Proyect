@@ -69,13 +69,13 @@ if __name__ == "__main__":
 
     for k,v in models.items():
 
-        # model = models[args.variant](nteams, costs, entera)
+        #model = models[args.variant](nteams, costs, entera)
 
         model = models[k](nteams, costs, entera)
 
         model.optimize()
-        #print(f"RESPUESTA {args.variant}")
-        print(f"RESPUESTA {args.variant}")
+        print(f"RESPUESTA {k}")
+        #(f"RESPUESTA {args.variant}")
 
         Var = model.get_nonzero_vars()
         for var in Var:
