@@ -16,7 +16,7 @@ class RoundMatchingPricer(ps.Pricer):
     _feasible : bool
     _fixings_node : object
 
-    def __init__(self, nteams : int, y : List[List[Matching]], conss : Tuple[Dict], costs : np.array) -> None:
+    def __init__(self, nteams : int, y : List[List[Matching]], conss : Tuple[Dict], costs : np.array, entera : bool) -> None:
         self._iter = 0
         self._teams = range(nteams)
         self._teams_to_shuffle = list(self._teams)
@@ -26,9 +26,10 @@ class RoundMatchingPricer(ps.Pricer):
         self._y = y
         self._conss = conss
         self._costs = costs
+        self._entera = entera
 
         self._interrupt = False
-        signal.signal(signal.SIGTERM, self.interruptSolve)  # Sigterm doesn't work well with multiprocessing pools
+        signal.signal(signal.SIGTERM, self.interruptSolve)  # Sigterm dopricerredcost esn't work well with multiprocessing pools
 
         super().__init__()
 
@@ -38,25 +39,27 @@ class RoundMatchingPricer(ps.Pricer):
 
     def pricerfree(self):
         '''calls destructor and frees memory of variable pricer '''
-        print("pricerfree")
+        #print("pricerfree")
+        pass
 
     def pricerinit(self):
         '''initializes variable pricer'''
-        print("pricerinit")
+        #print("pricerinit")
         pass
 
     def pricerexit(self):
         '''calls exit method of variable pricer'''
-        print("pricerexit")
+        #print("pricerexit")
         pass
 
     def pricerinitsol(self):
         '''informs variable pricer that the branch and bound process is being started '''
-        print("pricerinitsol")
+        #print("pricerinitsol")
+        pass
 
     def pricerexitsol(self):
         '''informs variable pricer that the branch and bound process data is being freed'''
-        print("pricerexitsol")
+        #print("pricerexitsol")
         pass
 
     def pricerredcost(self):
@@ -67,9 +70,9 @@ class RoundMatchingPricer(ps.Pricer):
     def pricerfarkas(self):
         '''calls Farkas pricing method of variable pricer'''
         # print("pricerfarkas")
-        return self._solve_pricing(farkas=True)
+        return self._solve_pricing(farkas=True,)
 
-    def _solve_pricing(self, farkas=False):
+    def _solve_pricing(self,farkas=False):
         # If we need to stop: Stop as soon as possible.
         if self._interrupt:
             self.model.interruptSolve()
@@ -153,18 +156,25 @@ class RoundMatchingPricer(ps.Pricer):
         return solval, matching
 
     def _add_round_matching(self, matching : Matching):
-        print(f"@03 Adding variable for matching {matching._id}: {matching.get_matches()}")
+        #print(f"@03 Adding variable for matching {matching._id}: {matching.get_matches()}")
         # Create variable
         round_scheds = self._y[matching.get_round()]
         idx = len(round_scheds)
         r = matching.get_round()
         obj = sum(self._costs[i, j, r] for (i, j) in matching.get_matches())
         # We're interested in relaxations, so "C".
-        if self._nteams <= 8:
-            name = f"y[{r},{str(matching.get_matches()).replace(' ', '')}]"
+        #if self._nteams <= 8:
+        name = f"y[{r},{str(matching.get_matches()).replace(' ', '')}]"
+        #else:
+        #    name = f"y[{r},{idx}]"
+
+
+        if self._entera:
+            var = self.model.addVar(name=name, vtype="B", pricedVar=True, obj=obj)
         else:
-            name = f"y[{r},{idx}]"
-        var = self.model.addVar(name=name, vtype="C", pricedVar=True, obj=obj)
+            var = self.model.addVar(name=name, vtype="C", pricedVar=True, obj=obj)
+
+
         matching.add_var(var)
         round_scheds.append(matching)
         self._y[r].append(matching)

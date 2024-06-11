@@ -1,46 +1,46 @@
 import pyscipopt as ps
 import itertools
+from Models.BaseModel import BaseModel
 
-class PermutationModel:
-    def __init__(self, nteams, costs,entera=False, **kwargs) -> None:
-        assert costs.shape == (nteams, nteams, nteams-1), "Incorrect dimensions"
-
-        self.model = None
-        self.nteams = nteams
-        self.costs = costs
-
-        self.teams = range(self.nteams)
-        self.rounds = range(self.nteams - 1)
-        self.permutations = list(itertools.permutations(self.teams))
-        self.permutations = [p for p in itertools.permutations(self.teams) if
-                             all(p[r] != i for r, i in enumerate(self.teams))]
-        print("AAAAAAAAAAAAAAAAAAAa")
-        print(len(self.permutations))
-        self._build(entera, **kwargs)
+class PermutationModel(BaseModel):
 
     def _build(self,entera=False, **kwargs):
-        assert self.model is None, "Modelo ya inicializado"
-
-        self.vars = {}
         self.model = ps.Model(f"Minimize carry-over effect for {self.nteams} teams", enablepricing=False)
-        self.model.redirectOutput()
-        self.model.setParam("display/freq", 1)
+        self.model.hideOutput()
+
+        teams = range(self.nteams)
+        rounds = range(self.nrounds)
+
+        combinations = list(itertools.combinations(teams, self.nteams - 1))
+        permutations = []
+        for combination in combinations:
+            permu = list(itertools.permutations(combination))
+            permutations.extend(permu)
+
+        self.permutations = permutations
 
         # variables
-        for i in self.teams:
+        self.var = {}
+        for i in teams:
             for pi in self.permutations:
-                if entera:
-                    var = self.model.addVar(name=f"z[{i},{pi}]", vtype="B")
-                else:
-                    var = self.model.addVar(name=f"z[{i},{pi}]", vtype="C")
+                if i not in pi:
+                    var_name = f"z[{i},{pi}]"
+                    if entera:
+                        var_type = "B"
+                    else:
+                        var_type = "C"
 
-                self.vars[i, pi] = var
+                    self.var[i, pi] = self.model.addVar(name=var_name, vtype=var_type)
+
 
 
         # Funcion objetivo
         self.model.setObjective(
             0.5 * ps.quicksum(
-                self.costs[i, pi[r], r] * self.vars[i, pi] for i in self.teams for pi in self.permutations for r in self.rounds),
+                self.costs[i, pi[r], r] * self.var[i, pi]
+                for i in teams
+                for pi in self.permutations if i not in pi
+                for r in rounds),
             sense="minimize"
         )
 
@@ -48,24 +48,24 @@ class PermutationModel:
 
         # Restricciones
         # P.2 Cada ya¡ba equoi tiene una unica permutacion
-        for i in self.teams:
-            self.model.addCons(ps.quicksum(self.vars[i, pi] for pi in self.permutations) == 1)
+        for i in teams:
+            self.model.addCons(
+                ps.quicksum(self.var[i, pi] for pi in self.permutations if i not in pi) == 1
+            )
 
         # P.3 se cumple a reflexion (i,j,r)) si y solo si ((j,i),r)
-        for i, j in itertools.combinations(self.teams, 2):
-            for r in self.rounds:
-                lhs = ps.quicksum(self.vars[i, pi] for pi in self.permutations if pi[r] == j)
-                rhs = ps.quicksum(self.vars[j, pi] for pi in self.permutations if pi[r] == i)
+        for i, j in itertools.combinations(teams, 2):
+            for r in rounds:
+                lhs = ps.quicksum(self.var[i, pi] for pi in self.permutations if i not in pi and pi[r] == j)
+                rhs = ps.quicksum(self.var[j, pi] for pi in self.permutations if j not in pi and pi[r] == i)
                 self.model.addCons(lhs == rhs)
 
-    def optimize(self):
-        self.model.optimize()
-        self.model.printStatistics()
 
-    def get_objval(self):
-        # Obtener valor funcional
-        return self.model.getObjVal()
-
-    def free(self):
-        # Liberar los recursos
-        self.model.freeProb()
+    def get_nonzero_vars(self):
+        non_zero_vars = []
+        for (i, pi), var in self.var.items():
+            value = self.model.getVal(var)
+            if value != 0:
+                var_name = f"z[{i},{pi}]"
+                non_zero_vars.append((var_name, value))
+        return non_zero_vars

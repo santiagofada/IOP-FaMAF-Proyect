@@ -1,35 +1,25 @@
 import pyscipopt as ps
 import itertools
 import numpy as np
-from typing import List
 from Utils.Matchingutils.roundschedule import Matching
 from Utils.Matchingutils.pricer import RoundMatchingPricer
+from Models.BaseModel import BaseModel
 
-class MatchingModel:
-    def __init__(self, nteams, costs, **kwargs) -> None:
-        assert costs.shape == (nteams, nteams, nteams-1), "Incorrect dimensions"
 
-        self.model : ps.Model = None
-        self.pricer = ps.Pricer = None
-        self._y : List[List[Matching]] = None
-        self.nteams : int = nteams
-        self.costs : np.array = costs
+class MatchingModelaux(BaseModel):
 
-        self._build()
-
-    def _build(self):
-        assert self.model is None, "Model already initialized!"
-
-        self.model = ps.Model(f"Minimize carry-over effect for {self.nteams} teams", enablepricing=True)
-        self.model.redirectOutput()
-        self.model.setParam("display/freq", 1)
+    def _build(self, entera):
+        self.model = ps.Model(f"Minimize carry-over effect for {self.nteams} teams", enablepricing=False)
+        #self.model.redirectOutput()
+        #self.model.setParam("display/freq", 1)
+        self.model.hideOutput()
 
         teams = range(self.nteams)
-        rounds = range(self.nteams - 1)
+        rounds = range(self.nrounds)
         matches = list(itertools.combinations(teams, r=2))
 
         # Variables
-        self._y = [[] for _ in rounds]
+        self.var = [[] for _ in rounds]
 
         # Objective
         self.model.setObjective(
@@ -37,34 +27,37 @@ class MatchingModel:
             sense="minimize"
         )
 
-        # Constraints
+        # Restricciones
+        # M2. un matching por ronda
         round_constrs = {
             r: self.model.addCons(
                 ps.quicksum([]) == 1,
-                modifiable = True
+                modifiable=True
             )
             for r in rounds
         }
-
+        # M3. Los equipos se cruzan una unica vez
         match_constrs = {
             m: self.model.addCons(
                 ps.quicksum([]) == 1,
-                modifiable = True
+                modifiable=True
             )
             for m in matches
         }
 
         # Introduce pricer
-        pricer = self.pricer = RoundMatchingPricer(self.nteams, self._y, (round_constrs, match_constrs), self.costs)
+        pricer = self.pricer = RoundMatchingPricer(self.nteams, self.var, (round_constrs, match_constrs), self.costs,entera=entera)
         self.model.includePricer(pricer, "RoundMatchingPricer", "A pricer for generating round schedules.")
 
-    def optimize(self):
-        self.model.optimize()
-        self.model.printStatistics()
 
-    def get_objval(self):
-        return self.model.getObjVal()
-
-    def free(self):
-        self.pricer.pricerfree()
-        self.model.freeProb()
+    def get_nonzero_vars(self):
+        seen = set()
+        non_zero_vars = []
+        for round_sched in self.var:
+            for match in round_sched:
+                var = match.get_var()
+                value = self.model.getVal(var)
+                if abs(value) > 1e-6 and var.name not in seen:
+                    non_zero_vars.append((var.name, value))
+                    seen.add(var.name)
+        return non_zero_vars

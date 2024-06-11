@@ -35,6 +35,9 @@ class Matching(object):
     def get_index(self):
         return self._id
 
+    def get_var(self):
+        return self._var
+
     def __str__(self):
         return f"<M{self._id}@{self._round}: {str(self._matches).replace(' ', '')}>"
 
@@ -46,3 +49,4 @@ class Matching(object):
 
     def __eq__(self, other):
         return self._id == other._id
+
