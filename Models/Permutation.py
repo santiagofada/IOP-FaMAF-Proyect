@@ -5,6 +5,8 @@ from Models.BaseModel import BaseModel
 class PermutationModel(BaseModel):
 
     def _build(self,entera=False, **kwargs):
+        print(entera)
+
         self.model = ps.Model(f"Minimize carry-over effect for {self.nteams} teams", enablepricing=False)
         self.model.hideOutput()
 
@@ -12,12 +14,12 @@ class PermutationModel(BaseModel):
         rounds = range(self.nrounds)
 
         combinations = list(itertools.combinations(teams, self.nteams - 1))
-        permutations = []
+        team_permutations  = []
         for combination in combinations:
-            permu = list(itertools.permutations(combination))
-            permutations.extend(permu)
+            permutations = list(itertools.permutations(combination))
+            team_permutations.extend(permutations)
 
-        self.permutations = permutations
+        self.permutations = team_permutations
 
         # variables
         self.var = {}
@@ -33,10 +35,9 @@ class PermutationModel(BaseModel):
                     self.var[i, pi] = self.model.addVar(name=var_name, vtype=var_type)
 
 
-
         # Funcion objetivo
         self.model.setObjective(
-            0.5 * ps.quicksum(
+            ps.quicksum(
                 self.costs[i, pi[r], r] * self.var[i, pi]
                 for i in teams
                 for pi in self.permutations if i not in pi
@@ -47,7 +48,7 @@ class PermutationModel(BaseModel):
 
 
         # Restricciones
-        # P.2 Cada ya¡ba equoi tiene una unica permutacion
+        # P.2 Cada equipo tiene una unica permutacion
         for i in teams:
             self.model.addCons(
                 ps.quicksum(self.var[i, pi] for pi in self.permutations if i not in pi) == 1
@@ -67,5 +68,7 @@ class PermutationModel(BaseModel):
             value = self.model.getVal(var)
             if value != 0:
                 var_name = f"z[{i},{pi}]"
-                non_zero_vars.append((var_name, value))
+
+
+                non_zero_vars.append((var_name, value,))
         return non_zero_vars

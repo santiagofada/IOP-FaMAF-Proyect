@@ -1,12 +1,10 @@
 import pyscipopt as ps
 import itertools
-import numpy as np
-from Utils.Matchingutils.roundschedule import Matching
 from Utils.Matchingutils.pricer import RoundMatchingPricer
 from Models.BaseModel import BaseModel
 
 
-class MatchingModelaux(BaseModel):
+class MatchingModel(BaseModel):
 
     def _build(self, entera):
         self.model = ps.Model(f"Minimize carry-over effect for {self.nteams} teams", enablepricing=False)

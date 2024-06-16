@@ -32,6 +32,7 @@ class TraditionalModel(BaseModel):
         }
         """
         if entera:
+
             # variables enteras
             self.var = {
                 ((i, j), r): self.model.addVar(name=f"x[({i},{j}),{r}]", lb=0.0, ub=1.0,
@@ -41,7 +42,7 @@ class TraditionalModel(BaseModel):
         else:
             # variables reales
             self.var = {
-                ((i, j), r): self.model.addVar(name=f"x[{i},{j},{r + 1}]", lb=0.0, ub=1.0,
+                ((i, j), r): self.model.addVar(name=f"x[({i},{j}),{r}]", lb=0.0, ub=1.0,
                                                vtype=("C"))
                 for (i, j), r in itertools.product(matches, rounds)
             }
