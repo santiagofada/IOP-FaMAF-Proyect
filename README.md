@@ -83,7 +83,14 @@ archivo 4_teams.srr
 - **Costos**: Los costos son arbitrarios y pueden ajustarse según las necesidades del problema.
 
 
-
+### Instalacion de librerias
+```sh
+  pip install -r requirements.txt
+```
 ### Ejemplo de Ejecución
 
 Para ejecutar el script, utiliza el siguiente comando en la terminal. Asegúrate de especificar el archivo de configuración adecuado y los parámetros necesarios:
+
+```sh
+python main.py --variant traditional --entera True --file example.srr
+```
