@@ -87,3 +87,7 @@ archivo 4_teams.srr
 ### Ejemplo de Ejecución
 
 Para ejecutar el script, utiliza el siguiente comando en la terminal. Asegúrate de especificar el archivo de configuración adecuado y los parámetros necesarios:
+
+```sh
+python main.py --variant traditional --entera True --file 4_teams.srr
+```
